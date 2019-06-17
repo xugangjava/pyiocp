@@ -1,0 +1,2 @@
+#pragma once
+#define _WEBSOCKETPP_NO_CPP11_SYSTEM_ERROR_
