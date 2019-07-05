@@ -3,10 +3,7 @@
 
 #pragma once
 
-#include "stdafx.h"
-#include <assert.h> 
-#include <stdlib.h> 
-#define ASSERT assert
+#include "Stdafx.h"
 //数组维数
 #define CountArray(Array) (sizeof(Array)/sizeof(Array[0]))
 //////////////////////////////////////////////////////////////////////////
@@ -101,9 +98,9 @@ public:
 	//析构函数
 	virtual ~CGameLogic();
 
-public:
-	BYTE Tran2GameCardType(const BYTE cbCardData[], BYTE cbCardCount, BYTE* dest);
-	BYTE Tran2AICardType(const BYTE cbCardData[], BYTE cbCardCount, BYTE* dest);
+//public:
+//	BYTE Tran2GameCardType(const BYTE cbCardData[], BYTE cbCardCount, BYTE* dest);
+//	BYTE Tran2AICardType(const BYTE cbCardData[], BYTE cbCardCount, BYTE* dest);
 	//类型函数
 public:
 	//获取类型

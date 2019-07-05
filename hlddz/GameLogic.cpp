@@ -1,6 +1,8 @@
 #include "StdAfx.h"
+#include <assert.h>
+#include <stdlib.h>
 #include "GameLogic.h"
-
+#define ASSERT assert
 //////////////////////////////////////////////////////////////////////////
 //静态变量
 
@@ -37,42 +39,42 @@ CGameLogic::CGameLogic()
 CGameLogic::~CGameLogic()
 {
 }
-
-//AI牌枚举
-BYTE CGameLogic::Tran2AICardType(const BYTE cbCardData[], BYTE cbCardCount, BYTE* dest)
-{
-	for (int i = 0; i < cbCardCount; i++)
-	{
-		int tran_v = cbCardData[i];
-		if (tran_v <= 70) {
-			int v = GetCardValue(dest[i]);
-			if (v == 13)tran_v -= 12;
-			else {
-				tran_v += 1;
-			}
-		}
-		dest[i] = tran_v;
-	}
-	return 0;
-}
-
-//游戏中的牌枚举
-BYTE CGameLogic::Tran2GameCardType(const BYTE cbCardData[], BYTE cbCardCount, BYTE* dest)
-{
-	for (int i = 0; i < cbCardCount; i++)
-	{
-		int tran_v = cbCardData[i];
-		if (tran_v <= 70) {
-			int v = GetCardValue(dest[i]);
-			if (v == 1)tran_v += 12;
-			else {
-				tran_v -= 1;
-			}
-		}
-		dest[i] = tran_v;
-	}
-	return 0;
-}
+//
+////AI牌枚举
+//BYTE CGameLogic::Tran2AICardType(const BYTE cbCardData[], BYTE cbCardCount, BYTE* dest)
+//{
+//	for (int i = 0; i < cbCardCount; i++)
+//	{
+//		int tran_v = cbCardData[i];
+//		if (tran_v <= 70) {
+//			int v = GetCardValue(dest[i]);
+//			if (v == 13)tran_v -= 12;
+//			else {
+//				tran_v += 1;
+//			}
+//		}
+//		dest[i] = tran_v;
+//	}
+//	return 0;
+//}
+//
+////游戏中的牌枚举
+//BYTE CGameLogic::Tran2GameCardType(const BYTE cbCardData[], BYTE cbCardCount, BYTE* dest)
+//{
+//	for (int i = 0; i < cbCardCount; i++)
+//	{
+//		int tran_v = cbCardData[i];
+//		if (tran_v <= 70) {
+//			int v = GetCardValue(dest[i]);
+//			if (v == 1)tran_v += 12;
+//			else {
+//				tran_v -= 1;
+//			}
+//		}
+//		dest[i] = tran_v;
+//	}
+//	return 0;
+//}
 
 //获取类型
 BYTE CGameLogic::GetCardType(const BYTE cbCardData[], BYTE cbCardCount)
