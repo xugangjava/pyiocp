@@ -29,12 +29,14 @@
 #include <boost/lockfree/queue.hpp>
 #include <queue>
 
+
 #define _WEBSOCKETPP_NO_CPP11_SYSTEM_ERROR_
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 
 #include "py_event.h"
 #pragma region socket
+
 using namespace boost::python;
 using boost::asio::ip::tcp;
 PyObject	*on_py_event;
@@ -51,7 +53,7 @@ class io_service_pool
 public:
 	explicit io_service_pool(int pool_size) : next_io_context_(0)
 	{
-		//ÖÁÉÙÓÐÁ½¸öÏß³Ì IOÏß³Ì PYÏß³Ì
+		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³ï¿½ IOï¿½ß³ï¿½ PYï¿½ß³ï¿½
 		if (pool_size < 2) {
 			pool_size = 2;
 		}
@@ -321,7 +323,7 @@ private:
 			}
 			else
 			{
-				//ÖØÖÃÁ¬½Ó
+				//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				iter->second->close();
 			}
 		}
@@ -391,13 +393,13 @@ public:
 		return r;
 	}
 
-	//²âÊÔÊØ»¤½ø³Ì
+	//ï¿½ï¿½ï¿½ï¿½ï¿½Ø»ï¿½ï¿½ï¿½ï¿½ï¿½
 	void crash() {
 		throw 0;
 	}
 
 	void call_latter(int sec, std::string timer_id) {
-		//µÈ´ý³õÊ¼»¯ºóÔËÐÐ
+		//ï¿½È´ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		if (!m_server)return;
 		boost::asio::deadline_timer*  t = new boost::asio::deadline_timer(
 			m_server->pool.get_io_service(),
@@ -521,7 +523,7 @@ public:
 		return sv;
 	}
 
-	//Á¬½Ó
+	//ï¿½ï¿½ï¿½ï¿½
 	static void on_open(ws* sv, websocketpp::connection_hdl hdl)
 	{
 		const std::string conn_id = sv->ws_ptr()->get_con_from_hdl(hdl)->get_remote_endpoint();
@@ -532,7 +534,7 @@ public:
 		sv->send_new_py_event(packet);
 	}
 
-	//¶Ï¿ª
+	//ï¿½Ï¿ï¿½
 	static void on_close(ws* sv, websocketpp::connection_hdl hdl)
 	{
 		ws_con_ptr con = sv->ws_ptr()->get_con_from_hdl(hdl);
@@ -546,7 +548,7 @@ public:
 	}
 
 
-	//Í¨ÐÅ
+	//Í¨ï¿½ï¿½
 	static void on_message(ws* sv, websocketpp::connection_hdl hdl, ws_msg_ptr msg)
 	{
 		if (msg->get_opcode() != websocketpp::frame::opcode::binary) {
@@ -571,7 +573,7 @@ public:
 
 
 
-	//ÒÆ³ýÁ¬½Ó
+	//ï¿½Æ³ï¿½ï¿½ï¿½ï¿½ï¿½
 	void remove_conn(std::string conn_id) {
 		if (!is_exist_conn(conn_id))return;
 		m_all_conn.erase(m_all_conn.find(conn_id));
@@ -586,7 +588,7 @@ public:
 	}
 
 
-#pragma region ½Ó¿Úº¯Êý
+#pragma region ï¿½Ó¿Úºï¿½ï¿½ï¿½
 	void send(std::string conn_id, int msg_type, std::string buf) {
 		if (!is_exist_conn(conn_id))return;
 		m_all_conn[conn_id]->refresh();
