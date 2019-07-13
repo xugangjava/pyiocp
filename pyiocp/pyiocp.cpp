@@ -53,7 +53,6 @@ class io_service_pool
 public:
 	explicit io_service_pool(int pool_size) : next_io_context_(0)
 	{
-		//�����������߳� IO�߳� PY�߳�
 		if (pool_size < 2) {
 			pool_size = 2;
 		}
@@ -323,7 +322,6 @@ private:
 			}
 			else
 			{
-				//��������
 				iter->second->close();
 			}
 		}
@@ -393,13 +391,12 @@ public:
 		return r;
 	}
 
-	//�����ػ�����
+
 	void crash() {
 		throw 0;
 	}
 
 	void call_latter(int sec, std::string timer_id) {
-		//�ȴ���ʼ��������
 		if (!m_server)return;
 		boost::asio::deadline_timer*  t = new boost::asio::deadline_timer(
 			m_server->pool.get_io_service(),
@@ -523,7 +520,7 @@ public:
 		return sv;
 	}
 
-	//����
+
 	static void on_open(ws* sv, websocketpp::connection_hdl hdl)
 	{
 		const std::string conn_id = sv->ws_ptr()->get_con_from_hdl(hdl)->get_remote_endpoint();
@@ -534,7 +531,7 @@ public:
 		sv->send_new_py_event(packet);
 	}
 
-	//�Ͽ�
+
 	static void on_close(ws* sv, websocketpp::connection_hdl hdl)
 	{
 		ws_con_ptr con = sv->ws_ptr()->get_con_from_hdl(hdl);
@@ -547,8 +544,6 @@ public:
 		sv->send_new_py_event(packet);
 	}
 
-
-	//ͨ��
 	static void on_message(ws* sv, websocketpp::connection_hdl hdl, ws_msg_ptr msg)
 	{
 		if (msg->get_opcode() != websocketpp::frame::opcode::binary) {
@@ -573,7 +568,7 @@ public:
 
 
 
-	//�Ƴ�����
+
 	void remove_conn(std::string conn_id) {
 		if (!is_exist_conn(conn_id))return;
 		m_all_conn.erase(m_all_conn.find(conn_id));
@@ -588,7 +583,6 @@ public:
 	}
 
 
-#pragma region �ӿں���
 	void send(std::string conn_id, int msg_type, std::string buf) {
 		if (!is_exist_conn(conn_id))return;
 		m_all_conn[conn_id]->refresh();
@@ -665,7 +659,6 @@ public:
 	void call_latter(int sec, std::string timer_id) {}
 
 	void crash() {}
-#pragma endregion
 
 
 };
