@@ -1,13 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29102.190
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pyiocp", "pyiocp\pyiocp.vcxproj", "{DB857902-C56D-4895-B16B-E408CFE7011B}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iocp", "iocp\iocp.vcxproj", "{B36ACF9F-76C7-465F-A3D2-BD22129CAAF1}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hlddz", "hlddz\hlddz.vcxproj", "{9AAD8611-823A-45F3-B5E1-C3A2A7DAF28C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pypyiocp", "pypyiocp\pypyiocp.vcxproj", "{234F9B53-064C-460D-A81C-4D14F480A3D6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,8 +43,19 @@ Global
 		{9AAD8611-823A-45F3-B5E1-C3A2A7DAF28C}.Release|x64.Build.0 = Release|x64
 		{9AAD8611-823A-45F3-B5E1-C3A2A7DAF28C}.Release|x86.ActiveCfg = Release|Win32
 		{9AAD8611-823A-45F3-B5E1-C3A2A7DAF28C}.Release|x86.Build.0 = Release|Win32
+		{234F9B53-064C-460D-A81C-4D14F480A3D6}.Debug|x64.ActiveCfg = Debug|x64
+		{234F9B53-064C-460D-A81C-4D14F480A3D6}.Debug|x64.Build.0 = Debug|x64
+		{234F9B53-064C-460D-A81C-4D14F480A3D6}.Debug|x86.ActiveCfg = Debug|Win32
+		{234F9B53-064C-460D-A81C-4D14F480A3D6}.Debug|x86.Build.0 = Debug|Win32
+		{234F9B53-064C-460D-A81C-4D14F480A3D6}.Release|x64.ActiveCfg = Release|x64
+		{234F9B53-064C-460D-A81C-4D14F480A3D6}.Release|x64.Build.0 = Release|x64
+		{234F9B53-064C-460D-A81C-4D14F480A3D6}.Release|x86.ActiveCfg = Release|Win32
+		{234F9B53-064C-460D-A81C-4D14F480A3D6}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D2AB1A3F-BAE3-421D-A033-50B7547B523E}
 	EndGlobalSection
 EndGlobal

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "py_event.h"
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -22,12 +23,7 @@
 #include <boost/thread/condition.hpp>
 #include <boost/lockfree/queue.hpp>
 #include <queue>
-
-using namespace boost::python;
 using boost::asio::ip::tcp;
-
-
-
 boost::lockfree::queue<py_event, boost::lockfree::capacity<10000>> que;
 class io_service_pool
 	: private boost::noncopyable
@@ -59,7 +55,7 @@ public:
 
 	void stop()
 	{
-		for (int i = 0; i < io_contexts_.size(); ++i)
+		for (size_t i = 0; i < io_contexts_.size(); ++i)
 			io_contexts_[i]->stop();
 	}
 
@@ -83,7 +79,7 @@ private:
 		boost::asio::io_context::executor_type> io_context_work;
 	std::vector<io_context_ptr> io_contexts_;
 	std::list<io_context_work> work_;
-	int next_io_context_;
+	size_t next_io_context_;
 };
 
 class server
@@ -202,7 +198,7 @@ class server
 			packet.event_type = EVT_DISCONNECT;
 			m_server->send_new_py_event(packet);
 			boost::system::error_code ignored_ec;
-			m_socket.release(ignored_ec);
+			//m_socket.release(ignored_ec);
 			m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
 			m_socket.close(ignored_ec);
 		}

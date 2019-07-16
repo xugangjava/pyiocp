@@ -17,12 +17,12 @@ struct py_event {
 	}
 	void set_conn_id(std::string c) {
 		csz = c.size();
-		strncpy(conn_id, c.c_str(), c.size());
+		strncpy_s(conn_id, c.c_str(), c.size());
 	}
 
 	void set_buf(std::string b) {
 		sz = b.size();
-		strncpy(body, b.c_str(), sz);
+		strncpy_s(body, b.c_str(), sz);
 	}
 
 	std::string get_buf() {
