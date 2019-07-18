@@ -25,14 +25,6 @@ struct py_event {
 		strncpy_s(body, b.c_str(), sz);
 	}
 
-	//std::string get_buf() {
-	//	return std::string(body, sz);
-	//}
-
-	//std::string get_conn_id() {
-	//	return std::string(conn_id, csz);
-	//}
-
 	char body[packet_length];
 	char head[head_length];
 	char conn_id[uuid_length];

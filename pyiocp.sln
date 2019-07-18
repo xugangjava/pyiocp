@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hlddz", "hlddz\hlddz.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pypyiocp", "pypyiocp\pypyiocp.vcxproj", "{234F9B53-064C-460D-A81C-4D14F480A3D6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pypyhlddz", "pypyhlddz\pypyhlddz.vcxproj", "{1592DE61-6A6D-4D74-8B0C-182688C1AF03}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -51,6 +53,14 @@ Global
 		{234F9B53-064C-460D-A81C-4D14F480A3D6}.Release|x64.Build.0 = Release|x64
 		{234F9B53-064C-460D-A81C-4D14F480A3D6}.Release|x86.ActiveCfg = Release|Win32
 		{234F9B53-064C-460D-A81C-4D14F480A3D6}.Release|x86.Build.0 = Release|Win32
+		{1592DE61-6A6D-4D74-8B0C-182688C1AF03}.Debug|x64.ActiveCfg = Debug|x64
+		{1592DE61-6A6D-4D74-8B0C-182688C1AF03}.Debug|x64.Build.0 = Debug|x64
+		{1592DE61-6A6D-4D74-8B0C-182688C1AF03}.Debug|x86.ActiveCfg = Debug|Win32
+		{1592DE61-6A6D-4D74-8B0C-182688C1AF03}.Debug|x86.Build.0 = Debug|Win32
+		{1592DE61-6A6D-4D74-8B0C-182688C1AF03}.Release|x64.ActiveCfg = Release|x64
+		{1592DE61-6A6D-4D74-8B0C-182688C1AF03}.Release|x64.Build.0 = Release|x64
+		{1592DE61-6A6D-4D74-8B0C-182688C1AF03}.Release|x86.ActiveCfg = Release|Win32
+		{1592DE61-6A6D-4D74-8B0C-182688C1AF03}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

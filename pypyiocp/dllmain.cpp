@@ -12,34 +12,18 @@ extern "C" _declspec(dllexport) void iocp_run(int port, int iocp_time_out, int t
 	pool->run();
 }
 
-extern "C" _declspec(dllexport) void iocp_send(
-	int msg_id,
-	const char* p_conn_id,
-	int csz,
-	const char* p_buf,
-	int bsz
-) {
+extern "C" _declspec(dllexport) void iocp_send(int msg_id,const char* p_conn_id,int csz,const char* p_buf,int bsz) {
 	std::string conn_id(p_conn_id,csz);
 	std::string buf(p_buf,bsz);
-	//std::string conn_id(p_conn_id);
-	//std::string buf(p_buf);
 	sv->post_send(conn_id, msg_id, buf);
 
 }
 
 
-extern "C" _declspec(dllexport) PyObject* iocp_get_event() {
-	std::vector<py_event> evts;
-	while (!que.empty()) {
-		py_event e;
-		que.pop(e);
-		evts.push_back(e);
-	}
-	PyObject* rs = PyList_New(0);
-	for (auto it = evts.begin(); it != evts.end(); it++) {
-		PyList_Append(rs, Py_BuildValue("iis#s#", it->msg_type, it->event_type, it->conn_id,it->csz, it->body,it->sz));
-	}
-	return rs;
+extern "C" _declspec(dllexport) int iocp_get_event(py_event* evt) {
+	if (que.empty())return 0;
+	que.pop(*evt);
+	return 1;
 }
 
 
@@ -62,16 +46,21 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 	LPVOID lpReserved
 )
 {
-	switch (ul_reason_for_call)
-	{
-	case DLL_PROCESS_ATTACH:
-		break;
-	case DLL_THREAD_ATTACH:
-		break;
-	case DLL_THREAD_DETACH:
-		break;
-	case DLL_PROCESS_DETACH:
-		break;
+	//switch (ul_reason_for_call)
+	//{
+	//case DLL_PROCESS_ATTACH:
+	//	break;
+	//case DLL_THREAD_ATTACH:
+	//	break;
+	//case DLL_THREAD_DETACH:
+	//	break;
+	//case DLL_PROCESS_DETACH:
+	//	dispose();
+	//	break;
+	//}
+
+	if (ul_reason_for_call == DLL_PROCESS_DETACH) {
+		dispose();
 	}
 	return TRUE;
 }
