@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
-#include "pypyiocp.h"
-#include <Python.h>
+#include "iocp.h"
 static server* sv;
 extern "C" _declspec(dllexport) void iocp_run(int port, int iocp_time_out, int thread_num) {
 

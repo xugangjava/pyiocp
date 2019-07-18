@@ -198,7 +198,7 @@ class server
 			packet.event_type = EVT_DISCONNECT;
 			m_server->send_new_py_event(packet);
 			boost::system::error_code ignored_ec;
-			m_socket.release(ignored_ec);
+	//		m_socket.release(ignored_ec);
 			m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
 			m_socket.close(ignored_ec);
 		}
