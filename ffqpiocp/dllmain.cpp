@@ -12,6 +12,13 @@ extern "C" _declspec(dllexport) MSG_GP_S_LogonByNameStruct login_struct(char* bu
 	return r;
 }
 
+extern "C" _declspec(dllexport) MSG_GR_S_RoomLogon login_room_struct(char* buf, int sz) {
+	MSG_GR_S_RoomLogon r;
+	ZeroMemory(&r, sizeof(r));
+	if (sz != sizeof(r))return r;
+	memcpy_s(&r, sz, buf, sz);
+	return r;
+}
 
 
 extern "C" _declspec(dllexport) void iocp_run(int port, int iocp_time_out, int thread_num) {

@@ -58,6 +58,15 @@ typedef struct
 
 typedef struct 
 {
+	UINT								uNameID;				//游戏 ID
+	INT									dwUserID;				//用户 ID
+	UINT								uRoomVer;				//大厅版本
+	UINT								uGameVer;				//游戏版本
+	CHAR								szMD5Pass[50];			//加密密码
+} MSG_GR_S_RoomLogon;
+
+typedef struct 
+{
 	BYTE						bMaxVer;							///最新版本号码
 	BYTE						bLessVer;							///最低版本号码
 	BYTE						bReserve[2];						///保留字段
