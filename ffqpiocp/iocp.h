@@ -129,8 +129,13 @@ class server
 			}
 			else {
 				packet.sz = packet.head.uMessageSize - sizeof(packet.head);
-				if (packet.sz > packet_length-1 || packet.sz <= 0) {
+				if (packet.sz > packet_length-1 || packet.sz < 0) {
 					close();
+					return;
+				}
+				if (packet.sz == 0) {
+					m_server->send_new_py_event(packet);
+					recv();
 					return;
 				}
 				boost::asio::async_read(
