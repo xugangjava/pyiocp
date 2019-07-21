@@ -16,7 +16,5 @@ test/dist
 Debug/
 Debug
 Release
-*.vcxproj
-*.vcxproj.*
 *.htm
 *.txt

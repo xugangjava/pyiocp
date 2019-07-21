@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "pch.h"
 #include "py_event.h"
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
@@ -100,6 +100,7 @@ class server
 			m_server = server;
 			is_closed = false;
 			idle = 0;
+			packet.set_conn_id(conn_id);
 		};
 
 		~conn() {
@@ -107,14 +108,11 @@ class server
 		}
 
 		const std::string id;
-
-
 		void recv() {
-			packet.set_conn_id(id);
 			packet.event_type = EVT_ON_MESSAGE;
 			boost::asio::async_read(
 				m_socket,
-				boost::asio::buffer(packet.head, head_length),
+				boost::asio::buffer(&packet.head, sizeof(packet.head)),
 				m_strand.wrap(boost::bind(
 					&conn::handle_read_head,
 					shared_from_this(),
@@ -130,11 +128,8 @@ class server
 				close();
 			}
 			else {
-				int length = (packet.head[1] & 0x000000ff) << 8 | (packet.head[0] & 0x000000ff);
-				int total_len = length + 2;
-				packet.msg_type = (packet.head[3] & 0x000000ff) << 8 | (packet.head[2] & 0x000000ff);
-				packet.sz = total_len - 4;
-				if (packet.sz > 8000) {
+				packet.sz = packet.head.uMessageSize - sizeof(packet.head);
+				if (packet.sz > packet_length-1 || packet.sz <= 0) {
 					close();
 					return;
 				}
@@ -157,26 +152,26 @@ class server
 				close();
 			}
 			else {
-				//packet.set_buf(std::string(body, packet.sz));
 				m_server->send_new_py_event(packet);
 				recv();
 			}
 		}
 
-		void send(int msg_type, std::string buf) {
+
+		void send(int msg_type, int case_id,int handle_code, std::string buf) {
 			idle = (long)time(0);
 			int sz = buf.size();
-			int total = 4 + sz;
-			int length = total - 2;
-			char head[4] = {
-				(length >> 0) & 0xFF,
-				(length >> 8) & 0xFF,
-				(msg_type >> 0) & 0xFF,
-				(msg_type >> 8) & 0xFF
+			int total = sizeof(packet.head) + sz;
+			MSG_FOR_SEND head = {
+				total,
+				msg_type,
+				case_id,
+				handle_code,
+				0,
 			};
 			std::vector<boost::asio::const_buffer> buffers;
-			buffers.push_back(boost::asio::buffer(head));
-			buffers.push_back(boost::asio::buffer(buf, sz));
+			buffers.push_back(boost::asio::buffer(&head, sizeof(packet.head)));
+			if(sz)buffers.push_back(boost::asio::buffer(buf, sz));
 			boost::asio::async_write(
 				m_socket,
 				buffers,
@@ -194,11 +189,9 @@ class server
 		void close() {
 			if (is_closed)return;
 			is_closed = true;
-			packet.set_conn_id(id);
 			packet.event_type = EVT_DISCONNECT;
 			m_server->send_new_py_event(packet);
 			boost::system::error_code ignored_ec;
-	//		m_socket.release(ignored_ec);
 			m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
 			m_socket.close(ignored_ec);
 		}
@@ -206,7 +199,6 @@ class server
 
 public:
 	typedef boost::shared_ptr<conn> conn_ptr;
-	//typedef boost::unordered_map<std::string, conn_ptr> conn_map;
 	tcp::acceptor m_acceptor;
 
 	io_service_pool& pool;
@@ -229,8 +221,8 @@ public:
 		pool.get_accept_io_service().post(boost::bind(&server::start_accept, this));
 	}
 
-	void post_send(std::string conn_id, int msg_type, std::string buf) {
-		pool.get_accept_io_service().post(boost::bind(&server::send, this, conn_id, msg_type, buf));
+	void post_send(std::string conn_id, int msg_type,int case_id,int handle_code, std::string buf) {
+		pool.get_accept_io_service().post(boost::bind(&server::send, this, conn_id, msg_type,  case_id, handle_code,buf));
 	}
 
 	void post_gc() {
@@ -264,17 +256,16 @@ private:
 		on_line_count = m_all_conn.size();
 	}
 
-	void send(std::string conn_id, int msg_type, std::string buf) {
+	void send(std::string conn_id, int msg_type, int case_id,int handle_code, std::string buf) {
 		auto iter = m_all_conn.find(conn_id);
 		if (iter == m_all_conn.end())return;
-		iter->second->send(msg_type, buf);
+		iter->second->send(msg_type, case_id, handle_code, buf);
 	}
 
 	void start_accept() {
 		boost::uuids::uuid uuid = boost::uuids::random_generator()();
 		const std::string tmp_uuid = boost::uuids::to_string(uuid);
 		m_all_conn[tmp_uuid] = conn_ptr(new conn(this, pool.get_io_service(), tmp_uuid));
-
 		m_acceptor.async_accept(
 			m_all_conn[tmp_uuid]->m_socket,
 			boost::bind(&server::handle_accept, this, tmp_uuid, boost::asio::placeholders::error)
@@ -292,11 +283,9 @@ private:
 				std::string sIp = iter->second->m_socket.remote_endpoint().address().to_v4().to_string();
 				packet.set_buf(sIp);
 				send_new_py_event(packet);
-				//conn->m_socket.set_option(boost::asio::ip::tcp::no_delay(true));
 				iter->second->m_socket.set_option(boost::asio::ip::tcp::no_delay(true));
 				iter->second->m_socket.set_option(boost::asio::socket_base::keep_alive(true));
 				iter->second->recv();
-
 			}
 			else
 			{
@@ -305,88 +294,4 @@ private:
 		}
 		start_accept();
 	}
-
 };
-//
-//
-//class pyiocp
-//{
-//
-//public:
-//	server* m_server;
-//	int m_thread_num;
-//	pyiocp(int thread_num) {
-//		m_thread_num = thread_num;
-//		m_server = NULL;
-//	}
-//
-//	~pyiocp() {
-//		if (m_server) {
-//			m_server->m_all_conn.erase(m_server->m_all_conn.begin(), m_server->m_all_conn.end());
-//			m_server->pool.stop();
-//			delete m_server;
-//		}
-//	}
-//
-//	int on_line_count() {
-//		if (!m_server)return 0;
-//		m_server->post_gc();
-//		return m_server->on_line_count;
-//	}
-//
-//	void send(std::string conn_id, int msg_type, std::string buf) {
-//		m_server->post_send(conn_id, msg_type, buf);
-//	}
-//
-//	void run(PyObject* cb, int port, int iocp_time_out) {
-//		on_py_event = cb;
-//		io_service_pool* pool = new io_service_pool(m_thread_num);
-//		m_server = new server(port, iocp_time_out, *pool);
-//		m_server->m_acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(1));
-//		m_server->m_acceptor.listen();
-//		m_server->post_start_accept();
-//		pool->run();
-//	}
-//
-//
-//	void call_on_time(boost::asio::deadline_timer* t, std::string& timer_id, const boost::system::error_code& error) {
-//		delete t;
-//		if (!error) {
-//			py_event evt;
-//			evt.event_type = EVT_ON_TIMER;
-//			evt.set_buf(timer_id);
-//			m_server->send_new_py_event(evt);
-//		}
-//	}
-//
-//	list get_event() {
-//		list r;
-//		while (!que.empty()) {
-//			py_event evt;
-//			que.pop(evt);
-//			r.append(evt);
-//		}
-//		return r;
-//	}
-//
-//
-//	void crash() {
-//		throw 0;
-//	}
-//
-//	void call_latter(int sec, std::string timer_id) {
-//		if (!m_server)return;
-//		boost::asio::deadline_timer* t = new boost::asio::deadline_timer(
-//			m_server->pool.get_io_service(),
-//			boost::posix_time::seconds(sec));
-//		t->async_wait(
-//			m_server->m_strand.wrap(boost::bind(
-//				&pyiocp::call_on_time,
-//				this,
-//				t,
-//				timer_id,
-//				boost::asio::placeholders::error
-//			))
-//		);
-//	}
-//};
