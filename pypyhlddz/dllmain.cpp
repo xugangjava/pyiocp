@@ -2,7 +2,13 @@
 #include "pch.h"
 #include "GameLogic.h"
 
-void game_cards_2_ai_cards(BYTE* src,int src_count) {
+
+typedef struct {
+	int sz;
+	int body[30];
+} py_card_result;
+
+void game_cards_2_ai_cards(BYTE* src, int src_count) {
 	for (int i = 0; i < src_count; i++)
 	{
 		if (src[i] == 53) {
@@ -43,6 +49,8 @@ void ai_cards_2_game_cards(BYTE* src, int src_count) {
 		}
 	}
 }
+
+
 extern "C" _declspec(dllexport)  void hlddz_search_out_card(
 	const BYTE* usr_card_1,
 	const int  usr_card_count_1, 
@@ -55,7 +63,7 @@ extern "C" _declspec(dllexport)  void hlddz_search_out_card(
 	const BYTE usr_idx,
 	const BYTE desk_idx,
 	const BYTE banker_idx,
-	tagOutCardResult* result
+	py_card_result* result
 	) {
 
 	BYTE all_card_data[4][MAX_COUNT];
@@ -91,9 +99,12 @@ extern "C" _declspec(dllexport)  void hlddz_search_out_card(
 		desk_card_count,
 		desk_idx,//当前出牌最大
 		usr_idx,//我的位置
-		*result);
-	ai_cards_2_game_cards(result->cbResultCard, result->cbCardCount);
+		rs);
+	ai_cards_2_game_cards(rs.cbResultCard, rs.cbCardCount);
+	result->sz = rs.cbCardCount;
+	for (int i = 0; i < rs.cbCardCount; i++)	result->body[i] = rs.cbResultCard[i];
 }
+
 
 extern "C" _declspec(dllexport) bool hlddz_cmp_out_card(
 	const BYTE* out_card,
@@ -136,7 +147,7 @@ extern "C" _declspec(dllexport) void hlddz_search_can_out_card(
 	const int  usr_card_count,
 	const BYTE* desk_card,
 	const int  desk_card_count,
-	tagOutCardResult* result
+	py_card_result* result
 ) {
 	BYTE all_card_data[2][MAX_COUNT];
 	memcpy(all_card_data[0], usr_card, usr_card_count);
@@ -148,14 +159,18 @@ extern "C" _declspec(dllexport) void hlddz_search_can_out_card(
 	CGameLogic logic;
 	logic.SortCardList(all_card_data[0], usr_card_count, ST_ORDER);
 	logic.SortCardList(all_card_data[1], desk_card_count, ST_ORDER);
+	tagOutCardResult rs;
 	logic.SearchOutCard(
 		all_card_data[0],
 		usr_card_count,
 		all_card_data[1],
 		desk_card_count,
-		*result);
-	ai_cards_2_game_cards(result->cbResultCard, result->cbCardCount);
+		rs);
 
+	ai_cards_2_game_cards(rs.cbResultCard, rs.cbCardCount);
+	result->sz = rs.cbCardCount;
+	for (int i = 0; i < rs.cbCardCount; i++)	result->body[i] = rs.cbResultCard[i];
+	
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -175,7 +190,7 @@ extern "C" _declspec(dllexport)  void tdlz_search_out_card(
 	const BYTE banker_idx,
 	const BYTE tlz,		//天癞子
 	const BYTE dlz,		//地癞子
-	tagOutCardResult* result
+	py_card_result* result
 ) {
 	BYTE all_card_data[4][MAX_COUNT];
 	memcpy(all_card_data[0], usr_card_1, usr_card_count_1);
@@ -223,7 +238,11 @@ extern "C" _declspec(dllexport)  void tdlz_search_out_card(
 		usr_idx,//我的位置
 		rs);
 	ai_cards_2_game_cards(rs.cbResultCard, rs.cbCardCount);
-	memcpy(result, &rs, sizeof(tagOutCardResult));
+	for (int i = 0; i < rs.cbCardCount; i++)
+	{
+		result->body[i] = rs.cbResultCard[i];
+	}
+	result->sz = rs.cbCardCount;
 }
 
 
