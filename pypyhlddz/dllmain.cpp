@@ -43,7 +43,7 @@ void ai_cards_2_game_cards(BYTE* src, int src_count) {
 		}
 	}
 }
-extern "C" _declspec(dllexport) tagOutCardResult hlddz_search_out_card(
+extern "C" _declspec(dllexport)  void hlddz_search_out_card(
 	const BYTE* usr_card_1,
 	const int  usr_card_count_1, 
 	const BYTE* usr_card_2,
@@ -54,10 +54,9 @@ extern "C" _declspec(dllexport) tagOutCardResult hlddz_search_out_card(
 	const int  desk_card_count,
 	const BYTE usr_idx,
 	const BYTE desk_idx,
-	const BYTE banker_idx
+	const BYTE banker_idx,
+	tagOutCardResult* result
 	) {
-	tagOutCardResult result;
-
 
 	BYTE all_card_data[4][MAX_COUNT];
 	memcpy(all_card_data[0], usr_card_1, usr_card_count_1);
@@ -84,6 +83,7 @@ extern "C" _declspec(dllexport) tagOutCardResult hlddz_search_out_card(
 	int usr_card_count = logic.m_cbUserCardCount[usr_idx];
 	logic.SortCardList(all_card_data[usr_idx], usr_card_count, ST_ORDER);
 	logic.SortCardList(all_card_data[3], desk_card_count, ST_ORDER);
+	tagOutCardResult rs;
 	logic.SearchOutCard(
 		all_card_data[usr_idx],
 		usr_card_count,
@@ -91,9 +91,8 @@ extern "C" _declspec(dllexport) tagOutCardResult hlddz_search_out_card(
 		desk_card_count,
 		desk_idx,//当前出牌最大
 		usr_idx,//我的位置
-		result);
-	ai_cards_2_game_cards(result.cbResultCard, result.cbCardCount);
-	return result;
+		*result);
+	ai_cards_2_game_cards(result->cbResultCard, result->cbCardCount);
 }
 
 extern "C" _declspec(dllexport) bool hlddz_cmp_out_card(
@@ -132,11 +131,12 @@ extern "C" _declspec(dllexport) int hlddz_get_card_type(
 }
 
 
-extern "C" _declspec(dllexport) tagOutCardResult hlddz_search_can_out_card(
+extern "C" _declspec(dllexport) void hlddz_search_can_out_card(
 	const BYTE* usr_card,
 	const int  usr_card_count,
 	const BYTE* desk_card,
-	const int  desk_card_count
+	const int  desk_card_count,
+	tagOutCardResult* result
 ) {
 	BYTE all_card_data[2][MAX_COUNT];
 	memcpy(all_card_data[0], usr_card, usr_card_count);
@@ -145,7 +145,6 @@ extern "C" _declspec(dllexport) tagOutCardResult hlddz_search_can_out_card(
 	game_cards_2_ai_cards(all_card_data[0], usr_card_count);
 	game_cards_2_ai_cards(all_card_data[1], desk_card_count);
 
-	tagOutCardResult result;
 	CGameLogic logic;
 	logic.SortCardList(all_card_data[0], usr_card_count, ST_ORDER);
 	logic.SortCardList(all_card_data[1], desk_card_count, ST_ORDER);
@@ -154,9 +153,9 @@ extern "C" _declspec(dllexport) tagOutCardResult hlddz_search_can_out_card(
 		usr_card_count,
 		all_card_data[1],
 		desk_card_count,
-		result);
-	ai_cards_2_game_cards(result.cbResultCard, result.cbCardCount);
-	return result;
+		*result);
+	ai_cards_2_game_cards(result->cbResultCard, result->cbCardCount);
+
 }
 
 
