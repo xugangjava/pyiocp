@@ -217,32 +217,33 @@ extern "C" _declspec(dllexport)  void tdlz_search_out_card(
 	ZeroMemory(lz_card, MAX_COUNT);
 	ZeroMemory(lz_card_maping, MAX_COUNT);
 
-	for (int i = 0; i < usr_card_count; i++)
-	{
-		int c = all_card_data[usr_idx][i];
-		int lv = logic.GetCardValue(c);
-		if (lv == tlz || lv == dlz) {
-			lz_card[i] = c;
-			lz_card_maping[i] = lv;
-		}
-	}
+	//for (int i = 0; i < usr_card_count; i++)
+	//{
+	//	int c = all_card_data[usr_idx][i];
+	//	int lv = logic.GetCardValue(c);
+	//	if (lv == tlz || lv == dlz) {
+	//		lz_card[i] = c;
+	//		lz_card_maping[i] = lv;
+	//	}
+	//}
 
-	logic.SortCardList(all_card_data[usr_idx], usr_card_count, ST_ORDER);
-	tagOutCardResult rs;
-	logic.SearchOutCard(
-		all_card_data[usr_idx],
-		usr_card_count,
-		all_card_data[3],
-		desk_card_count,
-		desk_idx,//当前出牌最大
-		usr_idx,//我的位置
-		rs);
-	ai_cards_2_game_cards(rs.cbResultCard, rs.cbCardCount);
-	for (int i = 0; i < rs.cbCardCount; i++)
-	{
-		result->body[i] = rs.cbResultCard[i];
-	}
-	result->sz = rs.cbCardCount;
+	//logic.SortCardList(all_card_data[usr_idx], usr_card_count, ST_ORDER);
+	//tagOutCardResult rs;
+	//logic.SearchOutCard(
+	//	all_card_data[usr_idx],
+	//	usr_card_count,
+	//	all_card_data[3],
+	//	desk_card_count,
+	//	desk_idx,//当前出牌最大
+	//	usr_idx,//我的位置
+	//	rs);
+	//ai_cards_2_game_cards(rs.cbResultCard, rs.cbCardCount);
+	//for (int i = 0; i < rs.cbCardCount; i++)
+	//{
+	//	result->body[i] = rs.cbResultCard[i];
+	//}
+	//result->sz = rs.cbCardCount;
+
 }
 
 
