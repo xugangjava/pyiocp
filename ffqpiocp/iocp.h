@@ -128,19 +128,19 @@ class server
 				close();
 			}
 			else {
-				packet.sz = packet.head.uMessageSize - sizeof(packet.head);
-				if (packet.sz > packet_length-1 || packet.sz < 0) {
+				packet.body_length = packet.head.uMessageSize - sizeof(packet.head);
+				if (packet.body_length > packet_length-1 || packet.body_length < 0) {
 					close();
 					return;
 				}
-				if (packet.sz == 0) {
+				if (packet.body_length == 0) {
 					m_server->send_new_py_event(packet);
 					recv();
 					return;
 				}
 				boost::asio::async_read(
 					m_socket,
-					boost::asio::buffer(packet.body, packet.sz),
+					boost::asio::buffer(packet.body, packet.body_length),
 					m_strand.wrap(boost::bind(
 						&conn::handle_read_body,
 						shared_from_this(),

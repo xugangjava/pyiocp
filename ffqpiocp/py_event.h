@@ -75,27 +75,27 @@ typedef struct
 
 struct py_event {
 	int event_type;
-	int csz;
-	int sz;
+	int connid_length;
+	int body_length;
 	char body[packet_length];
 	char conn_id[uuid_length];
 	MSG_HEAD head;
 
 	py_event() {
-		sz=csz = 0;
+		body_length=connid_length = 0;
 		event_type = 0;
 		ZeroMemory(&head, sizeof(head));
 	}
 
 	void set_conn_id(std::string c) {
-		csz = c.size();
-		strncpy_s(conn_id, c.c_str(), csz);
+		connid_length = c.size();
+		strncpy_s(conn_id, c.c_str(), connid_length);
 	}
 
 	void set_buf(std::string b) {
-		sz = b.size();
-		head.uMessageSize = sz + sizeof(head);
-		strncpy_s(body, b.c_str(), sz);
+		body_length = b.size();
+		head.uMessageSize = body_length + sizeof(head);
+		strncpy_s(body, b.c_str(), body_length);
 	}
 };
 
