@@ -150,6 +150,7 @@ struct conn
 	}
 
 	void recv_done(char* buf, int offset) {
+		if (is_closed)return;
 		int ret = packet.push(buf, offset);
 		if (ret < 0) {
 			close();

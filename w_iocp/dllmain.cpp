@@ -1,5 +1,4 @@
-﻿// dllmain.cpp : 定义 DLL 应用程序的入口点。
-#include <iostream>
+﻿#include <iostream>
 #include <winsock2.h>
 #include <windows.h>
 #include <mswsock.h>  
@@ -17,7 +16,6 @@
 #pragma comment(lib, "Mswsock.lib")
 HANDLE g_hIOCP;
 enum { head_length = 4, packet_length = 8192, uuid_length = 40 };
-
 #pragma pack(push,1)
 struct py_event {
 	int sz;
@@ -50,6 +48,8 @@ struct conn;
 enum { EVT_CONNECT = 1, EVT_DISCONNECT = 4, EVT_ON_MESSAGE = 2, EVT_SEND_MESSAGE = 3, EVT_ON_TIMER = 5 };
 enum { IO_CONNECT = 1, IO_DISCONNECT = 4, IO_READ = 2, IO_SEND = 3 };
 boost::lockfree::queue<py_event, boost::lockfree::capacity<10000>> que;
+
+
 SOCKET listen_socket;
 sockaddr_in listen_address;
 int m_iocp_time_out;
@@ -60,9 +60,9 @@ struct packet {
 	int offset;
 	char _buffer[packet_length];
 	std::string conn_id;
-	int total_length;
+
 	packet() {
-		total_length=offset = 0;
+		offset = 0;
 		ZeroMemory(_buffer, packet_length);
 	}
 
@@ -72,11 +72,8 @@ struct packet {
 		offset += len;
 		if (offset < 4)return 0;
 		//获取包长度
-		if (total_length == 0) {
-			int length = (_buffer[1] & 0x000000ff) << 8 | (_buffer[0] & 0x000000ff);
-			total_length = length + 2;
-		}
-
+		int length = (_buffer[1] & 0x000000ff) << 8 | (_buffer[0] & 0x000000ff);
+		int total_length = length + 2;
 		if (total_length > packet_length)return -1;
 		if (offset >= total_length) {
 			//获取完整包
@@ -93,7 +90,6 @@ struct packet {
 
 			memcpy(&_buffer, &_buffer[total_length], packet_length - total_length);
 			offset -= total_length;
-			total_length = 0;
 		}
 		return 0;
 	}
@@ -110,8 +106,8 @@ struct io_evt {
 		conn = NULL;
 		op_type = -1;
 		ZeroMemory(&Overlapped, sizeof(OVERLAPPED));
-		buf.len = 0;
 		buf.buf = 0;
+		buf.len = 0;
 	}
 };
 
@@ -138,9 +134,7 @@ struct conn
 		io_evt* io = new io_evt();
 		io->op_type = IO_READ;
 		io->conn = this;
-		io->buf.buf = 0;
-		io->buf.len = 0;
-		int nRet = WSARecv(sock, &io->buf, 0, &offset, &dwFlags, &io->Overlapped, NULL);
+		int nRet = WSARecv(sock, &io->buf, 1, &offset, &dwFlags, &io->Overlapped, NULL);
 		if (nRet == SOCKET_ERROR && (ERROR_IO_PENDING != WSAGetLastError())) {
 			close();
 			return;
@@ -249,7 +243,7 @@ DWORD WINAPI work_thread(LPVOID WorkThreadContext) {
 		}
 		else if (evt->op_type == IO_READ) {
 			//收到消息继续收
-			evt->conn->recv_done(evt->buf.buf, evt->buf.len);
+			evt->conn->recv_done(evt->buf, evt->buf.len);
 			evt->conn->recv();
 		}
 		delete evt;
@@ -279,6 +273,7 @@ extern "C" _declspec(dllexport) void iocp_run(int port, int iocp_time_out, int t
 }
 
 extern "C" _declspec(dllexport) void iocp_send(int msg_type, const char* p_conn_id, int csz, const char* p_buf, int bsz) {
+
 	std::string conn_id(p_conn_id, csz);
 	auto iter = m_all_conn.find(conn_id);
 	if (iter == m_all_conn.end())return;
@@ -288,19 +283,18 @@ extern "C" _declspec(dllexport) void iocp_send(int msg_type, const char* p_conn_
 		(msg_type >> 0) & 0xFF,
 		(msg_type >> 8) & 0xFF
 	};
-	io_evt* evt = new io_evt();
 	std::string packet(head);
 	packet.append(p_buf, bsz);
 	WSABUF buf;
 	buf.buf = const_cast<char*>(packet.c_str());
 	buf.len = 4 + bsz;
 	DWORD dwFlags = 0, offset;
-	int nRet = WSASend(iter->second->sock, &buf, 1, &offset, dwFlags, &evt->Overlapped, NULL);
+	int nRet = WSASend(iter->second->sock, &buf, 1, &offset, dwFlags, NULL, NULL);
 	if (SOCKET_ERROR == nRet && WSA_IO_PENDING != WSAGetLastError())
 	{
 		iter->second->close();
-		delete evt;
 	}
+
 }
 
 
