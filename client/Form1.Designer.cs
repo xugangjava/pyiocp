@@ -62,7 +62,7 @@
             // txtConsole
             // 
             this.txtConsole.Location = new System.Drawing.Point(134, 197);
-            this.txtConsole.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.txtConsole.Margin = new System.Windows.Forms.Padding(2);
             this.txtConsole.Multiline = true;
             this.txtConsole.Name = "txtConsole";
             this.txtConsole.Size = new System.Drawing.Size(474, 182);
@@ -71,7 +71,7 @@
             // btnStop
             // 
             this.btnStop.Location = new System.Drawing.Point(500, 396);
-            this.btnStop.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnStop.Margin = new System.Windows.Forms.Padding(2);
             this.btnStop.Name = "btnStop";
             this.btnStop.Size = new System.Drawing.Size(107, 34);
             this.btnStop.TabIndex = 3;
@@ -82,7 +82,7 @@
             // txtIP
             // 
             this.txtIP.Location = new System.Drawing.Point(134, 20);
-            this.txtIP.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.txtIP.Margin = new System.Windows.Forms.Padding(2);
             this.txtIP.Name = "txtIP";
             this.txtIP.Size = new System.Drawing.Size(164, 21);
             this.txtIP.TabIndex = 4;
@@ -91,7 +91,7 @@
             // txtPort
             // 
             this.txtPort.Location = new System.Drawing.Point(449, 20);
-            this.txtPort.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.txtPort.Margin = new System.Windows.Forms.Padding(2);
             this.txtPort.Name = "txtPort";
             this.txtPort.Size = new System.Drawing.Size(103, 21);
             this.txtPort.TabIndex = 5;
@@ -100,7 +100,7 @@
             // btnStart
             // 
             this.btnStart.Location = new System.Drawing.Point(358, 396);
-            this.btnStart.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnStart.Margin = new System.Windows.Forms.Padding(2);
             this.btnStart.Name = "btnStart";
             this.btnStart.Size = new System.Drawing.Size(107, 34);
             this.btnStart.TabIndex = 6;
@@ -121,11 +121,11 @@
             // txtThread
             // 
             this.txtThread.Location = new System.Drawing.Point(134, 66);
-            this.txtThread.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.txtThread.Margin = new System.Windows.Forms.Padding(2);
             this.txtThread.Name = "txtThread";
             this.txtThread.Size = new System.Drawing.Size(120, 21);
             this.txtThread.TabIndex = 8;
-            this.txtThread.Text = "1000";
+            this.txtThread.Text = "100";
             // 
             // Form1
             // 
@@ -141,7 +141,7 @@
             this.Controls.Add(this.txtConsole);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
-            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "Form1";
             this.Text = "Form1";
             this.ResumeLayout(false);

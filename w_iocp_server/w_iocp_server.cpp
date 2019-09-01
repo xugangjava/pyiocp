@@ -1,6 +1,5 @@
 ﻿// w_iocp_server.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
 //
-
 #include <iostream>
 #include <winsock2.h>
 #include <windows.h>
@@ -11,8 +10,6 @@
 #include <string>
 #include<boost/unordered_map.hpp>
 #include <boost/lockfree/queue.hpp>
-
-
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -52,8 +49,8 @@ struct py_event {
 
 struct conn;
 enum { EVT_CONNECT = 1, EVT_DISCONNECT = 4, EVT_ON_MESSAGE = 2, EVT_SEND_MESSAGE = 3, EVT_ON_TIMER = 5 };
-enum { IO_CONNECT = 1, IO_DISCONNECT = 4, IO_READ = 2, IO_SEND = 3};
-boost::lockfree::queue<py_event, boost::lockfree::capacity<10000>> que;
+enum { IO_CONNECT = 1, IO_DISCONNECT = 4, IO_READ = 2, IO_SEND = 3 };
+boost::lockfree::queue<py_event, boost::lockfree::capacity<50000>> que;
 
 
 SOCKET listen_socket;
@@ -67,14 +64,20 @@ struct packet {
 	char _buffer[packet_length];
 	std::string conn_id;
 
+	WSABUF buf;
+	char recv_buffer[packet_length];
+
 	packet() {
 		offset = 0;
 		ZeroMemory(_buffer, packet_length);
+		buf.buf = recv_buffer;
+		buf.len = packet_length;
 	}
 
-	int push(char* buf, int len) {
+	int push(int len) {
+		if (len == 0)return -1;
 		if (offset + len >= packet_length)return -1;
-		memcpy(&_buffer[offset], buf, len);
+		memcpy(&_buffer[offset], recv_buffer, len);
 		offset += len;
 		if (offset < 4)return 0;
 		//获取包长度
@@ -85,6 +88,7 @@ struct packet {
 			//获取完整包
 			int msg_type = (_buffer[3] & 0x000000ff) << 8 | (_buffer[2] & 0x000000ff);
 			int body_length = total_length - 4;
+			if (body_length < 0)return -1;
 			//提交消息
 			py_event evt;
 			memcpy(evt.body, &_buffer[4], body_length);
@@ -105,17 +109,12 @@ struct packet {
 
 struct io_evt {
 	OVERLAPPED Overlapped;
-	char _buffer[packet_length];
 	int op_type;
 	conn* conn;
-	WSABUF buf;
 	io_evt() {
 		conn = NULL;
 		op_type = -1;
-		ZeroMemory(_buffer, packet_length);
 		ZeroMemory(&Overlapped, sizeof(OVERLAPPED));
-		buf.buf = _buffer;
-		buf.len = packet_length;
 	}
 };
 
@@ -133,7 +132,7 @@ struct conn
 		boost::uuids::uuid uuid = boost::uuids::random_generator()();
 		conn_id = boost::uuids::to_string(uuid);
 		packet.conn_id = conn_id;
-		sock= WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+		sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 		CreateIoCompletionPort((HANDLE)sock, g_hIOCP, 0, 0);
 	}
 
@@ -142,16 +141,16 @@ struct conn
 		io_evt* io = new io_evt();
 		io->op_type = IO_READ;
 		io->conn = this;
-		int nRet = WSARecv(sock, &io->buf, 1, &offset, &dwFlags, &io->Overlapped, NULL);
+		int nRet = WSARecv(sock, &io->conn->packet.buf, 1, &offset, &dwFlags, &io->Overlapped, NULL);
 		if (nRet == SOCKET_ERROR && (ERROR_IO_PENDING != WSAGetLastError())) {
 			close();
 			return;
 		}
 	}
 
-	void recv_done(char* buf, int offset) {
+	void recv_done(int offset) {
 		if (is_closed)return;
-		int ret = packet.push(buf, offset);
+		int ret = packet.push(offset);
 		if (ret < 0) {
 			close();
 			return;
@@ -194,11 +193,11 @@ struct conn
 		evt->op_type = IO_CONNECT;
 		evt->conn = new conn();
 		DWORD dwBytesReceived = 0;
-		int ret=AcceptEx(listen_socket,evt->conn->sock,
-			evt->_buffer, 0, 
-			sizeof(sockaddr_in) + 16, 
-			sizeof(sockaddr_in) + 16, 
-			&dwBytesReceived, 
+		int ret = AcceptEx(listen_socket, evt->conn->sock,
+			evt->conn->packet.recv_buffer, 0,
+			sizeof(sockaddr_in) + 16,
+			sizeof(sockaddr_in) + 16,
+			&dwBytesReceived,
 			&(evt->Overlapped));
 		if (!ret && WSAGetLastError() != WSA_IO_PENDING) {
 			return false;
@@ -213,18 +212,13 @@ struct conn
 		evt.event_type = EVT_CONNECT;
 		evt.set_conn_id(io->conn->conn_id);
 		evt.conn = io->conn;
-		if (getpeername(io->conn->sock, (struct sockaddr*) &raddr, &raddr_len) == 0) {
+		if (getpeername(io->conn->sock, (struct sockaddr*) & raddr, &raddr_len) == 0) {
 			evt.set_buf(inet_ntoa(raddr.sin_addr));
 		}
 		que.push(evt);
 
 	}
-
 };
-
-
-
-
 
 DWORD WINAPI work_thread(LPVOID WorkThreadContext) {
 	io_evt* evt = NULL;
@@ -235,13 +229,13 @@ DWORD WINAPI work_thread(LPVOID WorkThreadContext) {
 	DWORD dwIoSize = 0;
 	void* lpCompletionKey = NULL;
 	while (1) {
-		BOOL rc=GetQueuedCompletionStatus(g_hIOCP,
+		BOOL rc = GetQueuedCompletionStatus(g_hIOCP,
 			&dwIoSize,
 			(PULONG_PTR)& lpCompletionKey,
-			(LPOVERLAPPED*)&evt,
+			(LPOVERLAPPED*)& evt,
 			INFINITE);
 		if (!rc) {
-			if (evt!= NULL&&evt->conn!=NULL)evt->conn->close();
+			if (evt != NULL && evt->conn != NULL)evt->conn->close();
 			continue;
 		}
 		if (evt->op_type == IO_CONNECT) {
@@ -252,7 +246,7 @@ DWORD WINAPI work_thread(LPVOID WorkThreadContext) {
 		}
 		else if (evt->op_type == IO_READ) {
 			//收到消息继续收
-			evt->conn->recv_done(evt->_buffer,dwIoSize);
+			evt->conn->recv_done(dwIoSize);
 			evt->conn->recv();
 		}
 		delete evt;
@@ -317,7 +311,7 @@ extern "C" _declspec(dllexport) int iocp_get_event(py_event* evt) {
 	else if (evt->event_type == EVT_DISCONNECT) {
 		auto iter = m_all_conn.find(evt->conn_id);
 		if (iter != m_all_conn.end()) {
-			iter->second->is_closed=true;
+			iter->second->is_closed = true;
 		}
 	}
 	else {
@@ -366,9 +360,9 @@ int main()
 		py_event evt;
 		iocp_get_event(&evt);
 		if (evt.event_type == EVT_ON_MESSAGE) {
-			iocp_send(1,evt.conn_id,evt.csz,evt.body,evt.sz);
+			iocp_send(1, evt.conn_id, evt.csz, evt.body, evt.sz);
 		}
 	}
-    std::cout << "Hello World!\n";
+	std::cout << "Hello World!\n";
 }
 

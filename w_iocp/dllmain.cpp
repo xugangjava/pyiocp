@@ -16,6 +16,7 @@
 #pragma comment(lib, "Mswsock.lib")
 HANDLE g_hIOCP;
 enum { head_length = 4, packet_length = 8192, uuid_length = 40 };
+
 #pragma pack(push,1)
 struct py_event {
 	int sz;
@@ -47,7 +48,7 @@ struct py_event {
 struct conn;
 enum { EVT_CONNECT = 1, EVT_DISCONNECT = 4, EVT_ON_MESSAGE = 2, EVT_SEND_MESSAGE = 3, EVT_ON_TIMER = 5 };
 enum { IO_CONNECT = 1, IO_DISCONNECT = 4, IO_READ = 2, IO_SEND = 3 };
-boost::lockfree::queue<py_event, boost::lockfree::capacity<10000>> que;
+boost::lockfree::queue<py_event, boost::lockfree::capacity<50000>> que;
 
 
 SOCKET listen_socket;
@@ -61,14 +62,20 @@ struct packet {
 	char _buffer[packet_length];
 	std::string conn_id;
 
+	WSABUF buf;
+	char recv_buffer[packet_length];
+
 	packet() {
 		offset = 0;
 		ZeroMemory(_buffer, packet_length);
+		buf.buf = recv_buffer;
+		buf.len = packet_length;
 	}
 
-	int push(char* buf, int len) {
+	int push(int len) {
+		if (len == 0)return -1;
 		if (offset + len >= packet_length)return -1;
-		memcpy(&_buffer[offset], buf, len);
+		memcpy(&_buffer[offset], recv_buffer, len);
 		offset += len;
 		if (offset < 4)return 0;
 		//获取包长度
@@ -79,6 +86,7 @@ struct packet {
 			//获取完整包
 			int msg_type = (_buffer[3] & 0x000000ff) << 8 | (_buffer[2] & 0x000000ff);
 			int body_length = total_length - 4;
+			if (body_length < 0)return -1;
 			//提交消息
 			py_event evt;
 			memcpy(evt.body, &_buffer[4], body_length);
@@ -101,13 +109,10 @@ struct io_evt {
 	OVERLAPPED Overlapped;
 	int op_type;
 	conn* conn;
-	WSABUF buf;
 	io_evt() {
 		conn = NULL;
 		op_type = -1;
 		ZeroMemory(&Overlapped, sizeof(OVERLAPPED));
-		buf.buf = 0;
-		buf.len = 0;
 	}
 };
 
@@ -117,7 +122,7 @@ struct conn
 	packet packet;
 	std::string conn_id;
 	boost::atomic<bool> is_closed;
-	int idle;
+	long idle;
 
 	conn() {
 		is_closed = false;
@@ -134,15 +139,16 @@ struct conn
 		io_evt* io = new io_evt();
 		io->op_type = IO_READ;
 		io->conn = this;
-		int nRet = WSARecv(sock, &io->buf, 1, &offset, &dwFlags, &io->Overlapped, NULL);
+		int nRet = WSARecv(sock, &io->conn->packet.buf, 1, &offset, &dwFlags, &io->Overlapped, NULL);
 		if (nRet == SOCKET_ERROR && (ERROR_IO_PENDING != WSAGetLastError())) {
 			close();
 			return;
 		}
 	}
 
-	void recv_done(char* buf, int offset) {
-		int ret = packet.push(buf, offset);
+	void recv_done(int offset) {
+		if (is_closed)return;
+		int ret = packet.push(offset);
 		if (ret < 0) {
 			close();
 			return;
@@ -186,7 +192,7 @@ struct conn
 		evt->conn = new conn();
 		DWORD dwBytesReceived = 0;
 		int ret = AcceptEx(listen_socket, evt->conn->sock,
-			NULL, 0,
+			evt->conn->packet.recv_buffer, 0,
 			sizeof(sockaddr_in) + 16,
 			sizeof(sockaddr_in) + 16,
 			&dwBytesReceived,
@@ -210,12 +216,7 @@ struct conn
 		que.push(evt);
 
 	}
-
 };
-
-
-
-
 
 DWORD WINAPI work_thread(LPVOID WorkThreadContext) {
 	io_evt* evt = NULL;
@@ -243,7 +244,7 @@ DWORD WINAPI work_thread(LPVOID WorkThreadContext) {
 		}
 		else if (evt->op_type == IO_READ) {
 			//收到消息继续收
-			evt->conn->recv_done(evt->buf, evt->buf.len);
+			evt->conn->recv_done(dwIoSize);
 			evt->conn->recv();
 		}
 		delete evt;
@@ -311,10 +312,10 @@ extern "C" _declspec(dllexport) int iocp_get_event(py_event* evt) {
 			iter->second->is_closed = true;
 		}
 	}
-	else {
+	else if(evt->event_type==EVT_ON_MESSAGE){
 		auto iter = m_all_conn.find(evt->conn_id);
 		if (iter != m_all_conn.end()) {
-			iter->second->idle = time(0);
+			iter->second->idle = (long)time(0);
 		}
 	}
 	return 1;
@@ -345,8 +346,6 @@ extern "C" _declspec(dllexport) int iocp_gc() {
 	}
 	return  m_all_conn.size();
 }
-
-
 
 
 BOOL APIENTRY DllMain(HMODULE hModule,

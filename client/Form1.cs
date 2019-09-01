@@ -1,9 +1,11 @@
-﻿using System;
+﻿using ProtoBuf;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -32,33 +34,31 @@ namespace client
             public static Stopwatch Stopwatch= new Stopwatch();
             public static bool RUNING;
             public static TextBox CONSOLE;
-
+            public static byte[] BUF;
 
 
             public static void Run()
             {
                 Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                var total = 4 + 4092;
-                var length = total - 2;
+              
                 client.Connect(END_POINT);
+         
+                byte[] recv_buffer = new byte[1024 * 4];
+
+
                 try
                 {
                     socket_count++;
                     while (RUNING)
                     {
-                        byte[] buffer = new byte[1024 * 4];
-                        buffer[0] = (byte)((length >> 0) & 0xFF);
-                        buffer[1] = (byte)((length >> 8) & 0xFF);
-                        buffer[2] = (100 >> 0) & 0xFF;
-                        buffer[3] = (100 >> 8) & 0xFF;
                         Stopwatch sw = new Stopwatch();
                         sw.Start();
-                        client.Send(buffer);
-                        client.Receive(buffer);
+                        client.Send(BUF);
+                        var n=client.Receive(recv_buffer);
                         sw.Stop();
                         socket_delay = sw.ElapsedMilliseconds;
                         socket_message_count++;
-                        socket_total_kb += 4;
+                        socket_total_kb += n;
                     }
                 }
                 finally
@@ -79,7 +79,7 @@ namespace client
                         socket_count,
                         socket_message_count / (sec + 1),
                         socket_delay,
-                        socket_total_kb/1024 / (sec + 1)
+                        socket_total_kb/1024 / 1024/(sec + 1)
                         );
                     SetText(txt);
                     Thread.Sleep(500);
@@ -126,7 +126,32 @@ namespace client
             WorkThread.socket_count = 0;
             WorkThread.socket_message_count = 0;
             WorkThread.socket_delay = 0;
-            WorkThread.CONSOLE = txtConsole; 
+            WorkThread.CONSOLE = txtConsole;
+
+            var ping = new protobuf.FLCSPing
+            {
+                fTimeStamp = 0.0f,
+                dwPingCount = 1,
+                dwServerTick = 1,
+                iActorID = 1,
+            };
+            byte[] body;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                Serializer.Serialize(ms, ping);
+                body = ms.ToArray();
+            }
+
+            var total = 4 + body.Length;
+            var length = total - 2;
+            byte[] head = new byte[4];
+            head[0] = (byte)((length >> 0) & 0xFF);
+            head[1] = (byte)((length >> 8) & 0xFF);
+            head[2] = (byte)(((int)protobuf.MsgID.MSGID_PING >> 0) & 0xFF);
+            head[3] = (byte)(((int)protobuf.MsgID.MSGID_PING >> 8) & 0xFF);
+            WorkThread.BUF = head.Concat(body).ToArray();
+
+
             for (int i = 0; i < thread_num; i++)
             {
                 var tr = new Thread(new ThreadStart(WorkThread.Run))
