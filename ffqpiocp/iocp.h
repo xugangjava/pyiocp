@@ -94,9 +94,10 @@ class server
 		py_event packet;
 		tcp::socket  m_socket;
 		server* m_server;
-		boost::asio::io_service::strand m_strand;
+
+		boost::asio::io_service& m_io_service;
 		conn(server* server, boost::asio::io_service& io_service, const std::string conn_id)
-			:m_socket(io_service), m_strand(io_service), id(conn_id) {
+			:m_socket(io_service), m_io_service(io_service), id(conn_id) {
 			m_server = server;
 			is_closed = false;
 			idle = 0;
@@ -113,12 +114,12 @@ class server
 			boost::asio::async_read(
 				m_socket,
 				boost::asio::buffer(&packet.head, sizeof(packet.head)),
-				m_strand.wrap(boost::bind(
+				boost::bind(
 					&conn::handle_read_head,
 					shared_from_this(),
 					_1,
 					_2
-				))
+				)
 			);
 		}
 
@@ -141,12 +142,12 @@ class server
 				boost::asio::async_read(
 					m_socket,
 					boost::asio::buffer(packet.body, packet.body_length),
-					m_strand.wrap(boost::bind(
+					boost::bind(
 						&conn::handle_read_body,
 						shared_from_this(),
 						_1,
 						_2
-					))
+					)
 				);
 			}
 		}
@@ -230,9 +231,9 @@ public:
 		pool.get_accept_io_service().post(boost::bind(&server::send, this, conn_id, msg_type,  case_id, handle_code,buf));
 	}
 
-	void post_gc() {
-		pool.get_accept_io_service().post(boost::bind(&server::gc, this));
-	}
+	//void post_gc() {
+	//	pool.get_accept_io_service().post(boost::bind(&server::gc, this));
+	//}
 
 	boost::atomic<int> on_line_count;
 
@@ -264,10 +265,11 @@ private:
 	void send(std::string conn_id, int msg_type, int case_id,int handle_code, std::string buf) {
 		auto iter = m_all_conn.find(conn_id);
 		if (iter == m_all_conn.end())return;
-		iter->second->send(msg_type, case_id, handle_code, buf);
+		iter->second->m_io_service.post(boost::bind(&conn::send, iter->second, msg_type, case_id, handle_code, buf));
 	}
 
 	void start_accept() {
+		gc();
 		boost::uuids::uuid uuid = boost::uuids::random_generator()();
 		const std::string tmp_uuid = boost::uuids::to_string(uuid);
 		m_all_conn[tmp_uuid] = conn_ptr(new conn(this, pool.get_io_service(), tmp_uuid));
