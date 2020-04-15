@@ -1,5 +1,8 @@
-#include "stdafx.h"
-#include "py_event.h"
+﻿// asio_echo.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
+//
+
+#include <iostream>
+#include <iostream>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -10,7 +13,7 @@
 #include <stdio.h>
 #include <fstream>
 #include <iomanip>
-#include <boost/unordered_map.hpp>
+#include <map>
 #include <boost/atomic.hpp> 
 #include <windows.h>  
 #include <memory>
@@ -22,7 +25,39 @@
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/lockfree/queue.hpp>
+#include <boost/unordered_map.hpp>
 #include <queue>
+#include <string>
+#pragma pack(push,1)
+enum { head_length = 4, packet_length = 8192, uuid_length = 40 };
+enum { EVT_CONNECT = 1, EVT_DISCONNECT = 4, EVT_ON_MESSAGE = 2, EVT_SEND_MESSAGE = 3, EVT_ON_TIMER = 5 };
+struct py_event {
+
+	int sz;
+	int csz;
+	int msg_type;
+	int event_type;
+
+	py_event() {
+		sz = msg_type = 0;
+		event_type = 0;
+	}
+	void set_conn_id(std::string c) {
+		csz = c.size();
+		strncpy_s(conn_id, c.c_str(), c.size());
+	}
+
+	void set_buf(std::string b) {
+		sz = b.size();
+		strncpy_s(body, b.c_str(), sz);
+	}
+
+	char body[packet_length];
+	char head[head_length];
+	char conn_id[uuid_length];
+};
+#pragma pack(pop)
+
 using boost::asio::ip::tcp;
 boost::lockfree::queue<py_event, boost::lockfree::capacity<10000>> que;
 class io_service_pool
@@ -82,6 +117,7 @@ private:
 	size_t next_io_context_;
 };
 
+
 class server
 {
 	class conn :
@@ -94,9 +130,9 @@ class server
 		py_event packet;
 		tcp::socket  m_socket;
 		server* m_server;
-		boost::asio::io_service& m_io_service;
+
 		conn(server* server, boost::asio::io_service& io_service, const std::string conn_id)
-			:m_socket(io_service),  id(conn_id), m_io_service(io_service){
+			:m_socket(io_service), id(conn_id) {
 			m_server = server;
 			is_closed = false;
 			idle = 0;
@@ -198,7 +234,7 @@ class server
 			packet.event_type = EVT_DISCONNECT;
 			m_server->send_new_py_event(packet);
 			boost::system::error_code ignored_ec;
-	//		m_socket.release(ignored_ec);
+			//		m_socket.release(ignored_ec);
 			m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
 			m_socket.close(ignored_ec);
 		}
@@ -229,12 +265,15 @@ public:
 	}
 
 	void post_send(std::string conn_id, int msg_type, std::string buf) {
-		pool.get_accept_io_service().post(boost::bind(&server::send, this, conn_id, msg_type, buf));
+		auto iter = m_all_conn.find(conn_id);
+		if (iter == m_all_conn.end())return;
+		iter->second->send(msg_type, buf);
+		//pool.get_accept_io_service().post(boost::bind(&server::send, this, conn_id, msg_type, buf));
 	}
 
-	/*void post_gc() {
+	void post_gc() {
 		pool.get_accept_io_service().post(boost::bind(&server::gc, this));
-	}*/
+	}
 
 	boost::atomic<int> on_line_count;
 
@@ -263,15 +302,13 @@ private:
 		on_line_count = m_all_conn.size();
 	}
 
-	void send(std::string conn_id, int msg_type, std::string buf) {
-		auto iter = m_all_conn.find(conn_id);
-		if (iter == m_all_conn.end())return;
-		iter->second->m_io_service.post(boost::bind(&conn::send, iter->second, msg_type, buf));
+	//void send(std::string conn_id, int msg_type, std::string buf) {
+	//	auto iter = m_all_conn.find(conn_id);
+	//	if (iter == m_all_conn.end())return;
 	//	iter->second->send(msg_type, buf);
-	}
+	//}
 
 	void start_accept() {
-		gc();
 		boost::uuids::uuid uuid = boost::uuids::random_generator()();
 		const std::string tmp_uuid = boost::uuids::to_string(uuid);
 		m_all_conn[tmp_uuid] = conn_ptr(new conn(this, pool.get_io_service(), tmp_uuid));
@@ -297,6 +334,7 @@ private:
 				iter->second->m_socket.set_option(boost::asio::ip::tcp::no_delay(true));
 				iter->second->m_socket.set_option(boost::asio::socket_base::keep_alive(true));
 				iter->second->recv();
+
 			}
 			else
 			{
@@ -307,86 +345,60 @@ private:
 	}
 
 };
-//
-//
-//class pyiocp
-//{
-//
-//public:
-//	server* m_server;
-//	int m_thread_num;
-//	pyiocp(int thread_num) {
-//		m_thread_num = thread_num;
-//		m_server = NULL;
-//	}
-//
-//	~pyiocp() {
-//		if (m_server) {
-//			m_server->m_all_conn.erase(m_server->m_all_conn.begin(), m_server->m_all_conn.end());
-//			m_server->pool.stop();
-//			delete m_server;
-//		}
-//	}
-//
-//	int on_line_count() {
-//		if (!m_server)return 0;
-//		m_server->post_gc();
-//		return m_server->on_line_count;
-//	}
-//
-//	void send(std::string conn_id, int msg_type, std::string buf) {
-//		m_server->post_send(conn_id, msg_type, buf);
-//	}
-//
-//	void run(PyObject* cb, int port, int iocp_time_out) {
-//		on_py_event = cb;
-//		io_service_pool* pool = new io_service_pool(m_thread_num);
-//		m_server = new server(port, iocp_time_out, *pool);
-//		m_server->m_acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(1));
-//		m_server->m_acceptor.listen();
-//		m_server->post_start_accept();
-//		pool->run();
-//	}
-//
-//
-//	void call_on_time(boost::asio::deadline_timer* t, std::string& timer_id, const boost::system::error_code& error) {
-//		delete t;
-//		if (!error) {
-//			py_event evt;
-//			evt.event_type = EVT_ON_TIMER;
-//			evt.set_buf(timer_id);
-//			m_server->send_new_py_event(evt);
-//		}
-//	}
-//
-//	list get_event() {
-//		list r;
-//		while (!que.empty()) {
-//			py_event evt;
-//			que.pop(evt);
-//			r.append(evt);
-//		}
-//		return r;
-//	}
-//
-//
-//	void crash() {
-//		throw 0;
-//	}
-//
-//	void call_latter(int sec, std::string timer_id) {
-//		if (!m_server)return;
-//		boost::asio::deadline_timer* t = new boost::asio::deadline_timer(
-//			m_server->pool.get_io_service(),
-//			boost::posix_time::seconds(sec));
-//		t->async_wait(
-//			m_server->m_strand.wrap(boost::bind(
-//				&pyiocp::call_on_time,
-//				this,
-//				t,
-//				timer_id,
-//				boost::asio::placeholders::error
-//			))
-//		);
-//	}
-//};
+
+
+static server* sv;
+extern "C" _declspec(dllexport) void iocp_run(int port, int iocp_time_out, int thread_num) {
+
+	io_service_pool* pool = new io_service_pool(thread_num);
+	sv = new server(port, iocp_time_out, *pool);
+	sv->m_acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(1));
+	sv->m_acceptor.listen();
+	sv->post_start_accept();
+	pool->run();
+}
+
+extern "C" _declspec(dllexport) void iocp_send(int msg_id, const char* p_conn_id, int csz, const char* p_buf, int bsz) {
+	std::string conn_id(p_conn_id, csz);
+	std::string buf(p_buf, bsz);
+	sv->post_send(conn_id, msg_id, buf);
+
+}
+
+
+extern "C" _declspec(dllexport) int iocp_get_event(py_event* evt) {
+	if (que.empty())return 0;
+	que.pop(*evt);
+	return 1;
+}
+
+
+extern "C" _declspec(dllexport) int iocp_gc() {
+	if (!sv)return 0;
+	sv->post_gc();
+	return sv->on_line_count;
+}
+
+void dispose() {
+	if (sv) {
+		sv->m_all_conn.erase(sv->m_all_conn.begin(), sv->m_all_conn.end());
+		sv->pool.stop();
+		delete sv;
+	}
+}
+
+
+int main()
+{
+	iocp_run(9999, 180, 24);
+
+	while (1)
+	{
+		py_event evt;
+		iocp_get_event(&evt);
+		if (evt.event_type == EVT_ON_MESSAGE) {
+			iocp_send(1, evt.conn_id, evt.csz, evt.body, evt.sz);
+		}
+	}
+	std::cout << "Hello World!\n";
+}

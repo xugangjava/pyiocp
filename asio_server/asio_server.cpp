@@ -53,6 +53,7 @@ struct py_event {
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/lockfree/queue.hpp>
+#include <boost/unordered_map.hpp>
 #include <queue>
 using boost::asio::ip::tcp;
 boost::lockfree::queue<py_event, boost::lockfree::capacity<10000>> que;
@@ -125,9 +126,9 @@ class server
 		py_event packet;
 		tcp::socket  m_socket;
 		server* m_server;
-		boost::asio::io_service::strand m_strand;
+
 		conn(server* server, boost::asio::io_service& io_service, const std::string conn_id)
-			:m_socket(io_service), m_strand(io_service), id(conn_id) {
+			:m_socket(io_service),  id(conn_id) {
 			m_server = server;
 			is_closed = false;
 			idle = 0;
@@ -146,12 +147,12 @@ class server
 			boost::asio::async_read(
 				m_socket,
 				boost::asio::buffer(packet.head, head_length),
-				m_strand.wrap(boost::bind(
+				boost::bind(
 					&conn::handle_read_head,
 					shared_from_this(),
 					_1,
 					_2
-				))
+				)
 			);
 		}
 
@@ -172,12 +173,12 @@ class server
 				boost::asio::async_read(
 					m_socket,
 					boost::asio::buffer(packet.body, packet.sz),
-					m_strand.wrap(boost::bind(
+					boost::bind(
 						&conn::handle_read_body,
 						shared_from_this(),
 						_1,
 						_2
-					))
+					)
 				);
 			}
 		}
@@ -241,13 +242,12 @@ public:
 	tcp::acceptor m_acceptor;
 
 	io_service_pool& pool;
-	std::map<std::string, conn_ptr> m_all_conn;
-	boost::asio::io_service::strand m_strand;
+	boost::unordered_map<std::string, conn_ptr> m_all_conn;
+
 	const int m_iocp_time_out;
 	explicit server(int port, int iocp_time_out, io_service_pool& p)
 		: pool(p),
 		m_acceptor(p.get_accept_io_service(), tcp::endpoint(tcp::v4(), port)),
-		m_strand(p.get_accept_io_service()),
 		m_iocp_time_out(iocp_time_out) {
 
 	}
@@ -261,11 +261,15 @@ public:
 	}
 
 	void post_send(std::string conn_id, int msg_type, std::string buf) {
-		pool.get_accept_io_service().post(boost::bind(&server::send, this, conn_id, msg_type, buf));
+		auto iter = m_all_conn.find(conn_id);
+		if (iter == m_all_conn.end())return;
+		iter->second->send(msg_type, buf);
+		//pool.get_accept_io_service().post(boost::bind(&server::send, this, conn_id, msg_type, buf));
 	}
 
 	void post_gc() {
-		pool.get_accept_io_service().post(boost::bind(&server::gc, this));
+		//pool.get_accept_io_service().post(boost::bind(&server::gc, this));
+		//gc();
 	}
 
 	boost::atomic<int> on_line_count;
@@ -295,13 +299,14 @@ private:
 		on_line_count = m_all_conn.size();
 	}
 
-	void send(std::string conn_id, int msg_type, std::string buf) {
-		auto iter = m_all_conn.find(conn_id);
-		if (iter == m_all_conn.end())return;
-		iter->second->send(msg_type, buf);
-	}
+	//void send(std::string conn_id, int msg_type, std::string buf) {
+	//	auto iter = m_all_conn.find(conn_id);
+	//	if (iter == m_all_conn.end())return;
+	//	iter->second->send(msg_type, buf);
+	//}
 
 	void start_accept() {
+		gc();
 		boost::uuids::uuid uuid = boost::uuids::random_generator()();
 		const std::string tmp_uuid = boost::uuids::to_string(uuid);
 		m_all_conn[tmp_uuid] = conn_ptr(new conn(this, pool.get_io_service(), tmp_uuid));
@@ -379,12 +384,29 @@ void dispose() {
 		delete sv;
 	}
 }
+typedef struct
+{
+	UINT						uMessageSize;			// 数据包大小
+	UINT						bMainID;				// 处理主类型
+	UINT						bAssistantID;			// 辅助处理类型 ID
+	UINT						bHandleCode;			// 数据包处理代码
+	UINT						bReserve;				// 保留字段
+}  MSG_HEAD;
 
-
+typedef struct
+{
+	DWORD						uMessageSize;			// 数据包大小
+	DWORD						bMainID;				// 处理主类型
+	DWORD						bAssistantID;			// 辅助处理类型 ID
+	DWORD						bHandleCode;			// 数据包处理代码
+	DWORD						bReserve;				// 保留字段
+}  MSG_FOR_SEND;
 int main()
 {
+	std::cout << sizeof(MSG_HEAD);
+	std::cout << sizeof(MSG_FOR_SEND);
 	iocp_run(9999, 180, 24);
-
+	
 	while (1)
 	{
 		py_event evt;

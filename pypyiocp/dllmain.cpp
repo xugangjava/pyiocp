@@ -20,15 +20,12 @@ extern "C" _declspec(dllexport) void iocp_send(int msg_id,const char* p_conn_id,
 
 
 extern "C" _declspec(dllexport) int iocp_get_event(py_event* evt) {
-	if (que.empty())return 0;
-	que.pop(*evt);
-	return 1;
+	return que.pop(*evt);
 }
 
 
 extern "C" _declspec(dllexport) int iocp_gc() {
 	if (!sv)return 0;
-	sv->post_gc();
 	return sv->on_line_count;
 }
 

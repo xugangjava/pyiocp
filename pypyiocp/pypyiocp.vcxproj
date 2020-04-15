@@ -49,7 +49,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v100</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -73,9 +73,10 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Python27\include;D:\LIB\boost_1_67_0;$(IncludePath)</IncludePath>
-    <OutDir>D:\GIT\pokerking\dll</OutDir>
+    <IncludePath>D:\LIB\boost_1_71_0;$(IncludePath)</IncludePath>
+    <OutDir>D:\GIT\pokerking_sl\dll</OutDir>
     <TargetName>iocpx64</TargetName>
+    <LibraryPath>D:\LIB\boost_1_71_0\libvc142;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
